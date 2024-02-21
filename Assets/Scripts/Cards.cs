@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,17 +10,19 @@ public class Cards : MonoBehaviour
 {
     public GameObject back;
     public GameObject face;
+    public GameObject outline;
     public Sprite[] faceSprite;
     public BoxCollider2D boxCollider;
     public bool faceUp = false;
-
+ 
     public bool isOntop = false;
     public bool isOnbottom = false;
     public Collider2D lastCollision;
-
+    
    
     public Vector3 targetPos;
     public int value;
+    public float clickTime = 0;
     public enum Suit
     {
         S,
@@ -36,7 +38,7 @@ public class Cards : MonoBehaviour
     {
         boxCollider = GetComponent<BoxCollider2D>();
         targetPos = transform.position;
-       
+        UpdateSprite();
     }
  
 
@@ -58,9 +60,13 @@ public class Cards : MonoBehaviour
                 break;
         }
     }
+    private void FixedUpdate()
+    {
+        clickTime += Time.fixedDeltaTime;
+    }
     private void Update()
     {
-        UpdateSprite();
+       
 
         if (!faceUp)
         {
@@ -73,9 +79,9 @@ public class Cards : MonoBehaviour
            
             boxCollider.enabled = true;
         }
-
+        outline.SetActive(isDragging);
         if (isDragging)
-        {
+        { 
             if (transform.GetComponentInParent<Bottoms>() != null)
             {
                 if (GameManager.Instance.draggingCards.Count > 0)
@@ -83,18 +89,20 @@ public class Cards : MonoBehaviour
                     foreach (GameObject card in GameManager.Instance.draggingCards)
                     {
                         Vector3 mousepos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                        
                         mousepos.z = -5 - (0.01f * GameManager.Instance.draggingCards.IndexOf(card));
                         mousepos += GetComponentInParent<Bottoms>().offSet * GameManager.Instance.draggingCards.IndexOf(card);
                         if (card.GetComponent<Cards>().isDragging)
                         {
                             card.transform.position = mousepos;
+                            
 
                         }
                         else
                         {
                             card.GetComponent<Cards>().isDragging = true;
                             card.transform.position = mousepos;
-
+                            
                         }
                     }
                 }
@@ -105,9 +113,10 @@ public class Cards : MonoBehaviour
                     mousePosition.z = -5;
                     transform.position = mousePosition;
             }
-            
-            
+
+
         }
+
 
     }
     public void OnMouseDown()
@@ -121,88 +130,99 @@ public class Cards : MonoBehaviour
                 GameManager.Instance.draggingCards.Add(transform.GetComponentInParent<Bottoms>().cards[i]);
             }
         }
-     
+        clickTime = 0;
 
     }
     
     public void OnMouseUp()
     {
-        if (isOntop && GameManager.Instance.draggingCards.Count <2)
+        if (clickTime <=0.2f)
         {
-            if (value == 1 && lastCollision.GetComponent<Top>().value == 0)
+            AutoMove();
+            foreach (GameObject card in GameManager.Instance.draggingCards)
             {
-                lastCollision.GetComponent<Top>().cards.Add(gameObject);
-                if (transform.GetComponentInParent<Bottoms>() != null)
-                {
-                    transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
-                }                
-                if (transform.GetComponentInParent<Top>() != null)
-                {
-                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                }                
-                if (transform.GetComponentInParent<RollCard>() != null)
-                {
-                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                }
-                 
-
-                transform.SetParent(lastCollision.transform);
-                lastCollision.GetComponent<Top>().value = value;
-                lastCollision.GetComponent<Top>().suit = suit;
-                GameManager.Instance.steps++;
-            }
-            if (value != 1 && (lastCollision.GetComponent<Top>().value == value - 1) && (suit == lastCollision.GetComponent<Top>().suit))
-            {
-                lastCollision.GetComponent<Top>().cards.Add(gameObject);
-                if (transform.GetComponentInParent<Bottoms>() != null)
-                {
-                    transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
-                }
-                if (transform.GetComponentInParent<Top>() != null)
-                {
-                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                }
-                if (transform.GetComponentInParent<RollCard>() != null)
-                {
-                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                }
-
-                transform.SetParent(lastCollision.transform);
-                lastCollision.GetComponent<Top>().value = value;
-                lastCollision.GetComponent<Top>().suit = suit;
-                GameManager.Instance.steps++;
+                card.GetComponent<Cards>().isDragging = false;
             }
         }
-        if (isOnbottom && lastCollision != null)
+        else
         {
-            if (value == 13 && lastCollision.GetComponent<Bottoms>().value == 14)
+            if (isOntop && GameManager.Instance.draggingCards.Count < 2)
             {
-                if (transform.GetComponentInParent<RollCard>() != null)
+                if (value == 1 && lastCollision.GetComponent<Top>().value == 0)
                 {
-                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    lastCollision.GetComponent<Top>().cards.Add(gameObject);
+                    if (transform.GetComponentInParent<Bottoms>() != null)
+                    {
+                        transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
+                    }
+                    if (transform.GetComponentInParent<Top>() != null)
+                    {
+                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                    }
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
                     GameManager.Instance.steps++;
-                }
-                else if (transform.GetComponentInParent<Top>() != null)
-                {
-                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
 
-                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                    transform.SetParent(lastCollision.transform);
+                    lastCollision.GetComponent<Top>().value = value;
+                    lastCollision.GetComponent<Top>().suit = suit;
+                }
+                if (value != 1 && (lastCollision.GetComponent<Top>().value == value - 1) && (suit == lastCollision.GetComponent<Top>().suit))
+                {
+                    lastCollision.GetComponent<Top>().cards.Add(gameObject);
+                    if (transform.GetComponentInParent<Bottoms>() != null)
+                    {
+                        transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
+                    }
+                    if (transform.GetComponentInParent<Top>() != null)
+                    {
+                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                    }
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
                     GameManager.Instance.steps++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                    transform.SetParent(lastCollision.transform);
+                    lastCollision.GetComponent<Top>().value = value;
+                    lastCollision.GetComponent<Top>().suit = suit;
                 }
-                else
-                {
-                    SwitchDraggingList();
-                }
-
-                transform.SetParent(lastCollision.transform);
-            }else if (value < 13)
+            }
+            if (isOnbottom && lastCollision != null)
             {
-                switch (lastCollision.GetComponent<Bottoms>().suit)
+                if (value == 13 && lastCollision.GetComponent<Bottoms>().value == 14)
                 {
-                    case Suit.S:
-                        if (suit == Suit.D || suit == Suit.H)
-                        {
+                    GameManager.Instance.steps++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
+                    else if (transform.GetComponentInParent<Top>() != null)
+                    {
+                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                    }
+                    else
+                    {
+                        SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
+                    }
+
+                    transform.SetParent(lastCollision.transform);
+                }
+                else if (value < 13)
+                {
+                    switch (lastCollision.GetComponent<Bottoms>().suit)
+                    {
+                        case Suit.S:
+                            if (suit == Suit.D || suit == Suit.H)
+                            {
                                 if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
                                 {
                                     if (transform.GetComponentInParent<RollCard>() != null)
@@ -210,130 +230,494 @@ public class Cards : MonoBehaviour
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
                                     else if (transform.GetComponentInParent<Top>() != null)
                                     {
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
                                     else
                                     {
-                                    SwitchDraggingList();
-                                    GameManager.Instance.steps++;
-                                }
+                                        SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
                                 }
                             }
+                            break;
+                        case Suit.C:
+                            if (suit == Suit.D || suit == Suit.H)
+                            {
+                                if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else
+                                    {
+                                        SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+
+                                    }
+                                }
+                            }
+                            break;
+                        case Suit.D:
+                            if (suit == Suit.S || suit == Suit.C)
+                            {
+                                if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else
+                                    {
+                                        SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                }
+                            }
+                            break;
+                        case Suit.H:
+                            if (suit == Suit.S || suit == Suit.C)
+                            {
+                                if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                    else
+                                    {
+                                        SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+                foreach (GameObject card in GameManager.Instance.draggingCards)
+                {
+                    card.GetComponent<Cards>().isDragging = false;
+                }
+                GameManager.Instance.draggingCards = new List<GameObject>();
+            }
+            foreach (GameObject card in GameManager.Instance.draggingCards)
+            {
+                card.GetComponent<Cards>().isDragging = false;
+            }
+            GameManager.Instance.draggingCards = new List<GameObject>();
+        }
+        GameManager.Instance.draggingCards = new List<GameObject>();
+
+
+        isDragging = false;
+
+    }
+    
+    private void AutoMove()
+    {
+        isDragging = false;
+        if (CanMove())
+        {
+            foreach (Top top in GameManager.Instance.tops)
+            {
+                if (value == 1 && top.value == 0 && transform.parent.tag != "Top" && GameManager.Instance.draggingCards.Count <= 1)
+                {
+                    top.cards.Add(gameObject);
+                    if (transform.GetComponentInParent<Bottoms>() != null)
+                    {
+                        transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
+                    }
+
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
+                    GameManager.Instance.steps++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+
+                    transform.SetParent(top.transform);
+                    top.value = value;
+                    top.suit = suit;
+                    GameManager.Instance.draggingCards.Clear();
+                    return;
+                }
+                if (value != 1 && (top.value == value - 1) && (suit == top.suit) && GameManager.Instance.draggingCards.Count <= 1)
+                {
+                    top.cards.Add(gameObject);
+                    if (transform.GetComponentInParent<Bottoms>() != null)
+                    {
+                        transform.GetComponentInParent<Bottoms>().cards.Remove(gameObject);
+                    }
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
+                    GameManager.Instance.steps++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                    transform.SetParent(top.transform);
+                    top.value = value;
+                    top.suit = suit;
+                    GameManager.Instance.draggingCards.Clear();
+                    return;
+                }
+            }
+            foreach (Bottoms bot in GameManager.Instance.bottoms)
+            {
+                Debug.Log(bot.value);
+                if (value == 13 && bot.value == 14)
+                {
+                    GameManager.Instance.steps++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                    if (transform.GetComponentInParent<RollCard>() != null)
+                    {
+                        bot.cards.Add(gameObject);
+                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+                    }
+                    else if (transform.GetComponentInParent<Top>() != null)
+                    {
+                        bot.cards.Add(gameObject);
+
+                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                    }
+                    else
+                    {
+                        SwitchDraggingList(bot);
+                    }
+
+                    transform.SetParent(bot.transform);
+                    break;
+                }
+                else if (value < 13)
+                {
+                    switch (bot.suit)
+                    {
+                        case Suit.S:
+                            if (suit == Suit.D || suit == Suit.H)
+                            {
+                                if (value != 13 && bot.value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Bottoms>() != null)
+                                    {
+                                        Debug.Log("asdfgasdf");
+
+                                        SwitchDraggingList(bot);
+                                        foreach (GameObject card in GameManager.Instance.draggingCards)
+                                        {
+                                            card.GetComponent<Cards>().isDragging = false;
+                                        }
+                                        GameManager.Instance.draggingCards = new List<GameObject>();
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+                                    }
+                                }
+                            }
+                            break;
+                        case Suit.C:
+                            if (suit == Suit.D || suit == Suit.H)
+                            {
+                                if (value != 13 && bot.value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Bottoms>() != null)
+                                    {
+                                        Debug.Log("asdfgasdf");
+
+                                        SwitchDraggingList(bot);
+                                        foreach (GameObject card in GameManager.Instance.draggingCards)
+                                        {
+                                            card.GetComponent<Cards>().isDragging = false;
+                                        }
+                                        GameManager.Instance.draggingCards = new List<GameObject>();
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+
+                                    }
+                                }
+                            }
+                            break;
+                        case Suit.D:
+                            if (suit == Suit.S || suit == Suit.C)
+                            {
+                                if (value != 13 && bot.value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Bottoms>() != null)
+                                    {
+                                        Debug.Log("asdfgasdf");
+
+                                        SwitchDraggingList(bot);
+                                        foreach (GameObject card in GameManager.Instance.draggingCards)
+                                        {
+                                            card.GetComponent<Cards>().isDragging = false;
+                                        }
+                                        GameManager.Instance.draggingCards = new List<GameObject>();
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                }
+                            }
+                            break;
+                        case Suit.H:
+                            if (suit == Suit.S || suit == Suit.C)
+                            {
+                                if (value != 13 && bot.value == value + 1)
+                                {
+                                    if (transform.GetComponentInParent<RollCard>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Top>() != null)
+                                    {
+                                        bot.cards.Add(gameObject);
+
+                                        transform.GetComponentInParent<Top>().cards.Remove(gameObject);
+
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                    else if (transform.GetComponentInParent<Bottoms>() != null)
+                                    {
+                                        Debug.Log("asdfgasdf");
+                                        SwitchDraggingList(bot);
+                                        foreach (GameObject card in GameManager.Instance.draggingCards)
+                                        {
+                                            card.GetComponent<Cards>().isDragging = false;
+                                        }
+                                        GameManager.Instance.draggingCards = new List<GameObject>();
+                                        GameManager.Instance.steps++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
+                                        return;
+
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            Rung();
+        }
+
+
+    }
+
+    public void Rung()
+    {
+        foreach (GameObject card in GameManager.Instance.draggingCards)
+        {
+            card.transform.DOShakePosition(0.3f, new Vector3(0.05f, 0.05f, 0), 5, 90f, false)
+                .OnComplete(() => {
+                    transform.DOMove(targetPos, 0.1f);
+                });
+
+        }
+    }
+
+    public bool CanMove()
+    {
+        foreach (Top top in GameManager.Instance.tops)
+        {
+            if (value == 1 && top.value == 0 && transform.parent.tag != "Top")
+            {
+                return true;
+            }
+            if (value != 1 && (top.value == value - 1) && (suit == top.suit))
+            {
+                return true;
+            }
+        }
+        foreach (Bottoms bot in GameManager.Instance.bottoms)
+        {
+            if (value == 13 && bot.value == 14)
+            {
+                return true;
+            }
+            else if (value < 13)
+            {
+                switch (bot.suit)
+                {
+                    case Suit.S:
+                        if (suit == Suit.D || suit == Suit.H)
+                        {
+                            if (value != 13 && bot.value == value + 1)
+                            {
+                                return true;
+                            }
+                        }
                         break;
                     case Suit.C:
                         if (suit == Suit.D || suit == Suit.H)
                         {
-                            if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                            if (value != 13 && bot.value == value + 1)
                             {
-                                if (transform.GetComponentInParent<RollCard>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else if (transform.GetComponentInParent<Top>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else
-                                {
-                                    SwitchDraggingList();
-                                    GameManager.Instance.steps++;
-
-                                }
+                                return true;
                             }
                         }
                         break;
                     case Suit.D:
                         if (suit == Suit.S || suit == Suit.C)
                         {
-                            if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                            if (value != 13 && bot.value == value + 1)
                             {
-                                if (transform.GetComponentInParent<RollCard>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else if (transform.GetComponentInParent<Top>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else
-                                {
-                                    SwitchDraggingList();
-                                    GameManager.Instance.steps++;
-                                }
+                                return true;
                             }
                         }
                         break;
                     case Suit.H:
                         if (suit == Suit.S || suit == Suit.C)
                         {
-                            if (value != 13 && lastCollision.GetComponent<Bottoms>().value == value + 1)
+                            if (value != 13 && bot.value == value + 1)
                             {
-                                if (transform.GetComponentInParent<RollCard>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else if (transform.GetComponentInParent<Top>() != null)
-                                {
-                                    lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
-
-                                    transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                    GameManager.Instance.steps++;
-                                }
-                                else
-                                {
-                                    SwitchDraggingList();
-                                    GameManager.Instance.steps++;
-                                }
+                                return true;
                             }
                         }
                         break;
                 }
             }
-            foreach(GameObject card in GameManager.Instance.draggingCards)
-            {
-                card.GetComponent<Cards>().isDragging = false;
-            }
-            GameManager.Instance.draggingCards = new List<GameObject>();
-        }
-        foreach (GameObject card in GameManager.Instance.draggingCards)
-        {
-            card.GetComponent<Cards>().isDragging = false;
-        }
-        GameManager.Instance.draggingCards = new List<GameObject>();
-        isDragging = false;
 
+
+        }
+        return false;
     }
 
-    private void SwitchDraggingList()
+    private void SwitchDraggingList(Bottoms nextmove)
     {
 
         for(int i = GameManager.Instance.draggingCards.Count - 1; i >= 0; i--)
         {
             GameManager.Instance.draggingCards[i].GetComponentInParent<Bottoms>().cards.RemoveAt(GameManager.Instance.draggingCards[i].GetComponentInParent<Bottoms>().cards.Count - 1);
         }
-        lastCollision.GetComponent<Bottoms>().cards.AddRange(GameManager.Instance.draggingCards);
+
+        nextmove.cards.AddRange(GameManager.Instance.draggingCards);
+
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -395,9 +779,6 @@ public class Cards : MonoBehaviour
         }
     }
 
-    private void CardAutoMove()
-    {
-        
-    }
+    
 
 }
