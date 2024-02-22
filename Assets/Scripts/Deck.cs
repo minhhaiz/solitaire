@@ -6,11 +6,16 @@ using UnityEngine;
 public class Deck : MonoBehaviour
 {
     public List<GameObject> cards = new List<GameObject>();
-
+    public GameObject outline;
     public Transform roll;
 
+    private void Awake()
+    {
+       outline.SetActive(false);
+    }
     private void OnMouseDown()
     {
+        outline.SetActive(false);
         if(cards.Count > 0)
         {
             cards[cards.Count - 1].transform.SetParent(roll);
@@ -31,6 +36,8 @@ public class Deck : MonoBehaviour
         
         for (int i = 0; i < cards.Count; i++)
         {
+            cards[i].GetComponent<Cards>().isOnRoll = false;
+
             cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.back * 0.001f * i;
             cards[i].GetComponent<Cards>().faceUp = false;
             cards[i].transform.SetParent(transform);

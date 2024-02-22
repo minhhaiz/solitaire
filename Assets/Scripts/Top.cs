@@ -21,6 +21,7 @@ public class Top : MonoBehaviour
         }
         for (int i = 0; i < cards.Count; i++)
         {
+            cards[i].GetComponent<Cards>().isOnRoll = false;
 
             cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.back * 0.01f * i;
             cards[i].GetComponent<Cards>().faceUp = true;

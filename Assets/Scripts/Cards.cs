@@ -17,6 +17,7 @@ public class Cards : MonoBehaviour
  
     public bool isOntop = false;
     public bool isOnbottom = false;
+    public bool isOnRoll = false;
     public Collider2D lastCollision;
     
    
@@ -67,17 +68,18 @@ public class Cards : MonoBehaviour
     private void Update()
     {
        
-
-        if (!faceUp)
+        if (!isOnRoll)
         {
-            transform.DORotate(new Vector3(0, 180, 0), 0.3f);
-            boxCollider.enabled = false;
-        }
-        else
-        {
-            transform.DORotate(new Vector3(0, 0, 0), 0.3f);
-           
-            boxCollider.enabled = true;
+            if (!faceUp)
+            {
+                transform.DORotate(new Vector3(0, 180, 0), 0.3f);
+                boxCollider.enabled = false;
+            }      
+             else
+            {
+                transform.DORotate(new Vector3(0, 0, 0), 0.3f);
+                boxCollider.enabled = true;
+            }
         }
         outline.SetActive(isDragging);
         if (isDragging)
@@ -469,7 +471,7 @@ public class Cards : MonoBehaviour
                                     }
                                     else if (transform.GetComponentInParent<Bottoms>() != null)
                                     {
-                                        Debug.Log("asdfgasdf");
+                                      
 
                                         SwitchDraggingList(bot);
                                         foreach (GameObject card in GameManager.Instance.draggingCards)
@@ -557,8 +559,8 @@ public class Cards : MonoBehaviour
                                     }
                                     else if (transform.GetComponentInParent<Bottoms>() != null)
                                     {
-                                        Debug.Log("asdfgasdf");
-
+                         
+            
                                         SwitchDraggingList(bot);
                                         foreach (GameObject card in GameManager.Instance.draggingCards)
                                         {
@@ -602,7 +604,7 @@ public class Cards : MonoBehaviour
                                     }
                                     else if (transform.GetComponentInParent<Bottoms>() != null)
                                     {
-                                        Debug.Log("asdfgasdf");
+                                        
                                         SwitchDraggingList(bot);
                                         foreach (GameObject card in GameManager.Instance.draggingCards)
                                         {

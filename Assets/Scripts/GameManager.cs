@@ -28,18 +28,18 @@ public class GameManager : MonoBehaviour
         public Transform parent;
 
     }
-    [SerializeField] private List <ObjectState> Steps = new List<ObjectState>();
+    [SerializeField] private List<ObjectState> Steps = new List<ObjectState>();
     private void Awake()
     {
         Time.timeScale = 1;
         Application.targetFrameRate = 144;
         Instance = this;
-        if (isRandom)   Shuffle();
+        if (isRandom) Shuffle();
         Deal();
-        
-      foreach(Transform slot in cardSlots)
+
+        foreach (Transform slot in cardSlots)
         {
-            Cards card = slot.GetComponentInChildren<Cards>();  
+            Cards card = slot.GetComponentInChildren<Cards>();
             if (card != null)
             {
                 listCards.Add(card);
@@ -50,13 +50,13 @@ public class GameManager : MonoBehaviour
     public void AddStep(ObjectState state)
     {
         Steps.Add(state);
-        
+
     }
 
     private void Update()
     {
         timer += Time.deltaTime;
-        
+
         if (CheckWin())
         {
             Win();
@@ -76,35 +76,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("win");
     }
 
-    public Transform AutoMove(Cards movingCard)
-    {
-
-        Transform validSlot = null;
-
-        // Ki?m tra t?ng v? trí trên bàn ch?i
-        foreach (Transform slot in cardSlots)
-        {
-            // Ki?m tra n?u v? trí ?ang tr?ng và lá bài có th? di chuy?n ??n ?ó
-            if (slot.childCount == 0 && CanMoveToPosition(slot, movingCard))
-            {
-                validSlot = slot;
-                break;
-            }
-        }
-
-        return validSlot;
-
-    }
-
-    bool CanMoveToPosition(Transform slot, Cards movingCard)
-    {
-
-        if(slot == null && movingCard.faceUp == true && movingCard.value == 1)
-        {
-            return true;
-        }
-        return true;
-    }
+  
     /*    private void SolitaireCreate()
    {
        if (isRandom)
@@ -274,5 +246,11 @@ public class GameManager : MonoBehaviour
        
         Continue();
 
+    }
+    public void Hint()
+    {
+     Cards card = new Cards();
+        card.CanMove();
+         
     }
 }

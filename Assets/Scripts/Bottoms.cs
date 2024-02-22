@@ -25,6 +25,7 @@ public class Bottoms : MonoBehaviour
         }
         for (int i = 0; i < cards.Count; i++)
         {
+            cards[i].GetComponent<Cards>().isOnRoll = false;
             if (cards[i] != null && !cards[i].GetComponent<Cards>().isDragging) {
                 cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * i;
                 if (i == cards.Count - 1)
