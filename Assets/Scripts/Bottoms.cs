@@ -26,14 +26,24 @@ public class Bottoms : MonoBehaviour
         for (int i = 0; i < cards.Count; i++)
         {
             cards[i].GetComponent<Cards>().isOnRoll = false;
+            cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * i;
             if (cards[i] != null && !cards[i].GetComponent<Cards>().isDragging) {
-                cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * i;
+                
                 if (i == cards.Count - 1)
                 {
                     cards[i].GetComponent<Cards>().faceUp = true;
+                   
                     value = cards[i].GetComponent<Cards>().value;
                     suit = cards[i].GetComponent<Cards>().suit;
+                }/*else
+                {
+                    cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * 0.3f * i;
                 }
+                
+                if(cards[i].GetComponent<Cards>().faceUp == false)
+                {
+                    cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * 0.3f * i;
+                }*/
                 cards[i].transform.SetParent(transform);
             }
         }
