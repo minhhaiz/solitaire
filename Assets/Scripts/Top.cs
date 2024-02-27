@@ -26,7 +26,7 @@ public class Top : MonoBehaviour
             cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.back * 0.01f * i;
             cards[i].GetComponent<Cards>().faceUp = true;
 
-
+            cards[i].transform.SetParent(transform);
             if(i == cards.Count - 1)
             {
                 value = cards[i].GetComponent<Cards>().value;

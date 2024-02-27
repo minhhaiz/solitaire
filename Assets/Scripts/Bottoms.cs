@@ -6,6 +6,7 @@ public class Bottoms : MonoBehaviour
 {
    public List<GameObject> cards  = new List<GameObject>();
     public Vector3 offSet;
+    public Vector3 offSet2;
     public BoxCollider2D boxCollider;
     public int value;
     public Cards.Suit suit;
@@ -23,10 +24,23 @@ public class Bottoms : MonoBehaviour
             suit = Cards.Suit.S;
             return;
         }
+        Vector3 spacing = Vector3.zero;
         for (int i = 0; i < cards.Count; i++)
         {
             cards[i].GetComponent<Cards>().isOnRoll = false;
-            cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * i;
+            if (i >  0  && cards[i-1].GetComponent<Cards>().faceUp) 
+            {
+                spacing += offSet;
+                cards[i].GetComponent<Cards>().targetPos = transform.position + spacing;
+            } else if (i > 0 && !cards[i - 1].GetComponent<Cards>().faceUp)
+            {
+                spacing += offSet2;
+                cards[i].GetComponent<Cards>().targetPos = transform.position + spacing;
+            } else if (i == 0)
+            {
+                cards[i].GetComponent<Cards>().targetPos = transform.position + spacing;
+            }
+
             if (cards[i] != null && !cards[i].GetComponent<Cards>().isDragging) {
                 
                 if (i == cards.Count - 1)
@@ -35,15 +49,7 @@ public class Bottoms : MonoBehaviour
                    
                     value = cards[i].GetComponent<Cards>().value;
                     suit = cards[i].GetComponent<Cards>().suit;
-                }/*else
-                {
-                    cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * 0.3f * i;
                 }
-                
-                if(cards[i].GetComponent<Cards>().faceUp == false)
-                {
-                    cards[i].GetComponent<Cards>().targetPos = transform.position + offSet * 0.3f * i;
-                }*/
                 cards[i].transform.SetParent(transform);
             }
         }

@@ -20,7 +20,7 @@ public class RollCard : MonoBehaviour
         {
             cards[i].GetComponent<Cards>().isOnRoll = true;
             cards[i].transform.DORotate(new Vector3(0, 360, 0), 0.6f);
-
+            cards[i].transform.SetParent(transform);
 
             if (cards[i] != null && !cards[i].GetComponent<Cards>().isDragging)
             {

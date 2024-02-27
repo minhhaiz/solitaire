@@ -13,10 +13,10 @@ public class HUDManager : MonoBehaviour
         {
             case HUDType.timer:
                 float time = GameManager.Instance.timer;
-                GetComponent<TextMeshProUGUI>().text = string.Format("{0:0}:{1:00}",(int)time/60, (int)time % 60);
+                GetComponent<TextMeshProUGUI>().text = string.Format("Time\n{0:0}:{1:00}",(int)time/60, (int)time % 60);
                 break;
             case HUDType.step:
-                GetComponent<TextMeshProUGUI>().text = string.Format("Steps: {0}", GameManager.Instance.steps);
+                GetComponent<TextMeshProUGUI>().text = string.Format("Move\n {0}", GameManager.Instance.steps);
                 break;
         }
     }
