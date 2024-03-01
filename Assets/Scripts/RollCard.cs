@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using Unity.VisualScripting;
+using System.Linq;
 
 public class RollCard : MonoBehaviour
 {
     public List<GameObject> cards = new List<GameObject>();
     private int oldChild;
- 
+    public Vector3 offset;
 
  
     private void Update()
@@ -16,40 +17,47 @@ public class RollCard : MonoBehaviour
         int total = cards.Count;
         if (oldChild == total) return;
         oldChild = total;
-        for (int i = 0; i < total; i++)
+        if (cards.Count >= 3)
         {
-            cards[i].GetComponent<Cards>().isOnRoll = true;
-            cards[i].transform.DORotate(new Vector3(0, 360, 0), 0.6f);
-            cards[i].transform.SetParent(transform);
-
-            if (cards[i] != null && !cards[i].GetComponent<Cards>().isDragging)
+            cards[cards.Count - 3].GetComponent<Cards>().targetPos = transform.position;
+            cards[cards.Count - 1].GetComponent<Cards>().faceUp = true;
+            cards[cards.Count - 2].GetComponent<Cards>().faceUp = true;            
+            cards[cards.Count - 3].GetComponent<Cards>().faceUp = true;
+            cards[cards.Count - 3].transform.SetParent(transform);
+            cards[cards.Count - 2].transform.SetParent(transform);
+            cards[cards.Count - 1].transform.SetParent(transform);
+            cards[cards.Count - 3].GetComponent<Rigidbody2D>().simulated = false;
+            cards[cards.Count - 2].GetComponent<Rigidbody2D>().simulated = false;
+            cards[cards.Count - 1].GetComponent<Rigidbody2D>().simulated = true;
+            cards[cards.Count - 2].GetComponent<Cards>().targetPos = transform.position + offset;
+            cards[cards.Count - 1].GetComponent<Cards>().targetPos = transform.position + offset * 2;
+            if (cards.Count > 3)
             {
-                if (i == 0)
-                {
-                    cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.back * 0.001f * i;
-                    cards[i].GetComponent<Cards>().faceUp = true;
-                    cards[i].GetComponent<Cards>().boxCollider.enabled = true;
+                for (int i = 0; i < cards.Count - 3; i++) {
+                    cards[i].GetComponent<Cards>().targetPos = transform.position - Vector3.back;
+                    cards[i].GetComponent<Cards>().faceUp = true; 
+                    cards[i].GetComponent<Rigidbody2D>().simulated = false;
+                    cards[i].transform.SetParent(transform);
 
                 }
-
-                if (i > 0)
-                {
-                    cards[i - 1].GetComponent<Cards>().targetPos = transform.position + Vector3.left * 0.2f +  Vector3.back * 0.001f * i;
-                    cards[i - 1].GetComponent<Cards>().boxCollider.enabled = false;
-                    cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.right * 0.03f + Vector3.back * 0.002f * i;
-                    cards[i].GetComponent<Cards>().faceUp = true;
-                    cards[i].GetComponent<Cards>().boxCollider.enabled = true;
-                }
-                if (i > 1)
-                {
-                    cards[i - 2].GetComponent<Cards>().targetPos = transform.position + Vector3.left * 0.4f + Vector3.back * 0.001f * i;
-                    cards[i - 2].GetComponent<Cards>().boxCollider.enabled = false;
-                    cards[i].GetComponent<Cards>().targetPos = transform.position + Vector3.right * 0.03f + Vector3.back * 0.002f * i;
-                    cards[i].GetComponent<Cards>().faceUp = true;
-                    cards[i].GetComponent<Cards>().boxCollider.enabled = true;
-                }
-
             }
+            
+        } else if (cards.Count == 2) {
+            cards[cards.Count - 2].GetComponent<Cards>().targetPos = transform.position;
+            cards[cards.Count - 1].GetComponent<Cards>().targetPos = transform.position + offset * 1;
+            cards[cards.Count - 2].GetComponent<Cards>().faceUp = true;
+            cards[cards.Count - 1].GetComponent<Cards>().faceUp = true;
+            cards[cards.Count - 2].GetComponent<Rigidbody2D>().simulated = false;
+            cards[cards.Count - 1].GetComponent<Rigidbody2D>().simulated = true;
+            cards[cards.Count - 2].transform.SetParent(transform);
+            cards[cards.Count - 1].transform.SetParent(transform);
+        }
+        else if (cards.Count == 1) {
+            cards[cards.Count - 1].GetComponent<Cards>().targetPos = transform.position;
+            cards[cards.Count - 1].GetComponent<Cards>().faceUp = true;
+            cards[cards.Count - 1].GetComponent<Rigidbody2D>().simulated = true;
+            cards[cards.Count - 1].transform.SetParent(transform);
+
         }
     }
 }

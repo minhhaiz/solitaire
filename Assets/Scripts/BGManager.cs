@@ -22,12 +22,12 @@ public class BGManager : MonoBehaviour
         if (isOn)
         {
             isOn = false;
-            panelBot.GetComponent<RectTransform>().DOMove(targetBot - new Vector3(0, 1000, 0), 0.6f);
+            panelBot.GetComponent<RectTransform>().DOMove(targetBot - new Vector3(0, 1000, 0), 0.4f);
         }
         else
         {
             isOn = true;
-            panelBot.GetComponent<RectTransform>().DOMove(targetBot, 0.6f);
+            panelBot.GetComponent<RectTransform>().DOMove(targetBot, 0.4f);
         }
     }
 }

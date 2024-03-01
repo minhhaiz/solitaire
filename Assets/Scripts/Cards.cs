@@ -15,15 +15,18 @@ public class Cards : MonoBehaviour
     public Sprite[] faceSprite;
     public BoxCollider2D boxCollider;
     public bool faceUp = false;
+    public bool preFaceUp = false;
  
     public bool isOntop = false;
     public bool isOnbottom = false;
     public bool isOnRoll = false;
     public Collider2D lastCollision;
-    
-   
+    public GameObject precard;
+
+    public Transform parent;
     public Vector3 targetPos;
     public int value;
+    public int indexInBot;
     public float clickTime = 0;
     public enum Suit
     {
@@ -70,17 +73,17 @@ public class Cards : MonoBehaviour
     }
     private void Update()
     {
-       
+
         if (!isOnRoll)
         {
             if (!faceUp)
             {
-                transform.DORotate(new Vector3(0, 180, 0), 0.3f);
+               GameManager.Instance.myTween= transform.DORotate(new Vector3(0, 180, 0), 0.3f);
                 boxCollider.enabled = false;
             }      
              else
             {
-                transform.DORotate(new Vector3(0, 0, 0), 0.3f);
+                GameManager.Instance.myTween = transform.DORotate(new Vector3(0, 0, 0), 0.3f);
                 boxCollider.enabled = true;
             }
         }
@@ -140,16 +143,44 @@ public class Cards : MonoBehaviour
 
     }
     
+    public void AddPrecard()
+    {
+        precard = null;
+        if (transform.parent.tag == "Bot")
+        {
+            if (indexInBot > 0)
+            {
+                precard = parent.GetComponent<Bottoms>().cards[indexInBot - 1];
+                preFaceUp = precard.GetComponent<Cards>().faceUp;
+            }
+        }
+        if (precard == null)
+        {
+            preFaceUp = false;
+        }
+    }
+    
     public void OnMouseUp()
     {
+        AddPrecard();
+
         if (clickTime <=0.2f)
         {
-            AutoMove();
+            if (CanMoveTop())
+            {
+                
+                StartCoroutine(AutoFlyTop());
+            }
+            else
+            {
+                AutoMove();
+            }
             foreach (GameObject card in GameManager.Instance.draggingCards)
             {
                 card.GetComponent<Cards>().isDragging = false;
             }
         }
+       
         else
         {
             if (isOntop && GameManager.Instance.draggingCards.Count < 2)
@@ -169,15 +200,9 @@ public class Cards : MonoBehaviour
                     {
                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
                     }
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
 
                     transform.SetParent(lastCollision.transform);
                     lastCollision.GetComponent<Top>().value = value;
@@ -198,15 +223,8 @@ public class Cards : MonoBehaviour
                     {
                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
                     }
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                     transform.SetParent(lastCollision.transform);
                     lastCollision.GetComponent<Top>().value = value;
                     lastCollision.GetComponent<Top>().suit = suit;
@@ -216,15 +234,8 @@ public class Cards : MonoBehaviour
             {
                 if (value == 13 && lastCollision.GetComponent<Bottoms>().value == 14)
                 {
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                     if (transform.GetComponentInParent<RollCard>() != null)
                     {
                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
@@ -257,43 +268,22 @@ public class Cards : MonoBehaviour
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
                                     {
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else
                                     {
                                         SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                 }
                             }
@@ -308,43 +298,22 @@ public class Cards : MonoBehaviour
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
                                     {
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else
                                     {
                                         SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                 }
                             }
@@ -359,43 +328,22 @@ public class Cards : MonoBehaviour
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
                                     {
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else
                                     {
                                         SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                 }
                             }
@@ -410,43 +358,22 @@ public class Cards : MonoBehaviour
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
                                     {
                                         lastCollision.GetComponent<Bottoms>().cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                     else
                                     {
                                         SwitchDraggingList(lastCollision.GetComponent<Bottoms>());
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                     }
                                 }
                             }
@@ -471,7 +398,18 @@ public class Cards : MonoBehaviour
         isDragging = false;
 
     }
-    
+
+    private IEnumerator AutoFlyTop()
+    {
+        AutoMove();
+        yield return new WaitForSeconds(0.2f);
+        while (GameManager.Instance.CardFly())
+        {
+            GameManager.Instance.check = false;
+            yield return new WaitForSeconds(0.4f);
+        }
+    }
+
     private void AutoMove()
     {
         isDragging = false;
@@ -491,15 +429,10 @@ public class Cards : MonoBehaviour
                     {
                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
                     }
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+
+                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
+
                     transform.SetParent(top.transform);
                     top.value = value;
                     top.suit = suit;
@@ -517,15 +450,8 @@ public class Cards : MonoBehaviour
                     {
                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
                     }
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                     transform.SetParent(top.transform);
                     top.value = value;
                     top.suit = suit;
@@ -535,18 +461,11 @@ public class Cards : MonoBehaviour
             }
             foreach (Bottoms bot in GameManager.Instance.bottoms)
             {
-                Debug.Log(bot.value);
+
                 if (value == 13 && bot.value == 14)
                 {
-                    GameManager.Instance.steps++;
-                    if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                    }
-                    else
-                    {
-                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                    }
+                    GameManager.Instance.stepsCount++;
+                    GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                     if (transform.GetComponentInParent<RollCard>() != null)
                     {
                         bot.cards.Add(gameObject);
@@ -581,15 +500,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
@@ -598,15 +510,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -620,15 +525,8 @@ public class Cards : MonoBehaviour
                                             card.GetComponent<Cards>().isDragging = false;
                                         }
                                         GameManager.Instance.draggingCards = new List<GameObject>();
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
                                     }
                                 }
@@ -645,15 +543,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
                                     }
                                     else if (transform.GetComponentInParent<Top>() != null)
@@ -661,15 +552,8 @@ public class Cards : MonoBehaviour
                                         bot.cards.Add(gameObject);
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -683,15 +567,8 @@ public class Cards : MonoBehaviour
                                             card.GetComponent<Cards>().isDragging = false;
                                         }
                                         GameManager.Instance.draggingCards = new List<GameObject>();
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
 
@@ -710,15 +587,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -728,15 +598,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -750,15 +613,8 @@ public class Cards : MonoBehaviour
                                             card.GetComponent<Cards>().isDragging = false;
                                         }
                                         GameManager.Instance.draggingCards = new List<GameObject>();
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -776,15 +632,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<RollCard>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -794,15 +643,8 @@ public class Cards : MonoBehaviour
 
                                         transform.GetComponentInParent<Top>().cards.Remove(gameObject);
 
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -815,15 +657,8 @@ public class Cards : MonoBehaviour
                                             card.GetComponent<Cards>().isDragging = false;
                                         }
                                         GameManager.Instance.draggingCards = new List<GameObject>();
-                                        GameManager.Instance.steps++;
-                                        if (transform.GetComponentInParent<Bottoms>() != null && transform.GetComponentInParent<Bottoms>().cards.IndexOf(gameObject) > 0)
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = transform.parent.GetComponent<Bottoms>().cards[transform.parent.GetComponent<Bottoms>().cards.IndexOf(gameObject) - 1] });
-                                        }
-                                        else
-                                        {
-                                            GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent });
-                                        }
+                                        GameManager.Instance.stepsCount++;
+                                        GameManager.Instance.AddStep(new GameManager.ObjectState() { card = this, parent = transform.parent, preCard = precard , prefaceup = preFaceUp});
                                         return;
 
                                     }
@@ -854,7 +689,7 @@ public class Cards : MonoBehaviour
         }
     }
 
-    public bool CanMove()
+    public bool CanMoveHint()
     {
         if (transform.parent.tag == "Bot" && transform.parent.GetComponent<Bottoms>().cards.Count > 0 && gameObject == transform.parent.GetComponent<Bottoms>().cards.Last())
         {
@@ -993,7 +828,7 @@ public class Cards : MonoBehaviour
         return false;
     }
 
-    public bool CanMoveHint()
+    public bool CanMove()
     {
         foreach (Top top in GameManager.Instance.tops)
         {
@@ -1056,6 +891,21 @@ public class Cards : MonoBehaviour
             }
 
 
+        }
+        return false;
+    }
+    public bool CanMoveTop()
+    {
+        foreach (Top top in GameManager.Instance.tops)
+        {
+            if (value == 1 && top.value == 0 && transform.parent.tag != "Top")
+            {
+                return true;
+            }
+            if (value != 1 && (top.value == value - 1) && (suit == top.suit))
+            {
+                return true;
+            }
         }
         return false;
     }
@@ -1193,7 +1043,7 @@ public class Cards : MonoBehaviour
     {
         if (!isDragging)
         {
-            transform.position =  Vector3.Lerp(transform.position, targetPos, 0.5f);
+            transform.position =  Vector3.Lerp(transform.position, targetPos, 0.3f);
         }
     }
 

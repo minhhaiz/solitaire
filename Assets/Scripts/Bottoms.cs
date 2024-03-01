@@ -52,6 +52,8 @@ public class Bottoms : MonoBehaviour
                 }
                 cards[i].transform.SetParent(transform);
             }
+            cards[i].GetComponent<Cards>().indexInBot = i;
+            cards[i].GetComponent<Cards>().parent = transform;
         }
 
        boxCollider.size = new Vector2(0.04539752f, cards[cards.Count - 1].GetComponent<BoxCollider2D>().size.y);
