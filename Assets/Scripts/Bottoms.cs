@@ -17,6 +17,7 @@ public class Bottoms : MonoBehaviour
     }
     private void Update()
     {
+
         if (cards.Count == 0) {
             boxCollider.offset = new Vector2 (0.002121329f, 0.003210127f);
             boxCollider.size = new Vector2(0.04539752f, 1.00642f);
@@ -54,6 +55,7 @@ public class Bottoms : MonoBehaviour
             }
             cards[i].GetComponent<Cards>().indexInBot = i;
             cards[i].GetComponent<Cards>().parent = transform;
+            cards[i].GetComponent<Rigidbody2D>().simulated = true;
         }
 
        boxCollider.size = new Vector2(0.04539752f, cards[cards.Count - 1].GetComponent<BoxCollider2D>().size.y);

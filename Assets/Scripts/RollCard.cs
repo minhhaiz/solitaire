@@ -14,6 +14,7 @@ public class RollCard : MonoBehaviour
  
     private void Update()
     {
+
         int total = cards.Count;
         if (oldChild == total) return;
         oldChild = total;

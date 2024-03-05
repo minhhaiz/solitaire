@@ -13,6 +13,7 @@ public class Top : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
         if (cards.Count == 0)
         {
             value = 0;

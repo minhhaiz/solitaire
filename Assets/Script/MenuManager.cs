@@ -125,7 +125,31 @@ public class MenuManager : MonoBehaviour
     }
     public void playRanDom()
     {
-        SceneManager.LoadScene("Random");
+        if (PlayerPrefs.HasKey("Process"))
+        {
+            PlayerPrefs.SetString("Level", "Continue");
+            SceneManager.LoadScene("Random");
+           
+        }
+        else
+        {
+            PlayerPrefs.SetString("Level", "Random");
+            SceneManager.LoadScene("Random");
+        }
+
         
+    }
+    public void PlayHard()
+    {
+      
+            PlayerPrefs.SetString("Level", "Random");
+            SceneManager.LoadScene("Random");
+        
+    }
+
+    public void StartEasy()
+    {
+        PlayerPrefs.SetString("Level", "Easy");
+        SceneManager.LoadScene("Random");
     }
 }

@@ -1,8 +1,10 @@
 using DG.Tweening;
 using DG.Tweening.Core.Easing;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Unity.Mathematics;
@@ -12,6 +14,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using static Cards;
+using Random = UnityEngine.Random;
 using Sequence = DG.Tweening.Sequence;
 
 
@@ -29,12 +32,14 @@ public class GameManager : MonoBehaviour
     public bool isStart = true;
     public List<GameObject> draggingCards = new List<GameObject>();
     public bool isRandom = false;
-
+    public bool isPlaying = false;
+    Vector3 targetPlay;
     public List<Transform> cardSlots;
-    public GameObject an, paneltop, panelbot, panelwin, panelPause, panelLose;
+    public GameObject an, paneltop, panelbot, panelwin, panelPause, panelLose, panelPlay;
     Vector3 panelLosePos;
     public int stepsCount;
     public List<GameObject> firstDeck;
+    public Process process = new Process();
 
     public Tween myTween = null;
     public class ObjectState
@@ -54,22 +59,49 @@ public class GameManager : MonoBehaviour
         panelLosePos = panelLose.GetComponent<RectTransform>().position;
         panelLose.GetComponent<RectTransform>().position += Vector3.up * 10000;
         panelLose.SetActive(true);
-        if (isRandom) Shuffle();
-        firstDeck = new List<GameObject>();
-        firstDeck.AddRange(deck.cards);
-        Debug.Log("First: " + firstDeck.Count);
-        Deal();
+        if (PlayerPrefs.GetString("Level") == "Easy")
+        {
+            LoadLevel();
+
+        }
+        else if (PlayerPrefs.GetString("Level") == "Random")
+        {
+            isRandom = true;
+            if (isRandom) Shuffle();
+            firstDeck = new List<GameObject>();
+            firstDeck.AddRange(deck.cards);
+            Debug.Log("First: " + firstDeck.Count);
+            Deal();
+        }
+        else if (PlayerPrefs.HasKey("Process"))
+        {
+            LoadProcess();
+            SaveProcess();
+        }
+        else
+        {
+            if (isRandom) Shuffle();
+            firstDeck = new List<GameObject>();
+            firstDeck.AddRange(deck.cards);
+            Debug.Log("First: " + firstDeck.Count);
+            Deal();
+        }
 
 
+        targetPlay = panelPlay.GetComponent<RectTransform>().position;
+        panelPlay.transform.position = targetPlay - new Vector3(0, 3000, 0);
+        SaveProcess();
 
     }
     public void AddStep(ObjectState state)
     {
         Steps.Add(state);
+        SaveProcess();
     }
 
     private void Update()
     {
+        if (isWon) return;
         timer += Time.deltaTime;
 
         if (CheckWin())
@@ -78,15 +110,18 @@ public class GameManager : MonoBehaviour
         }
 
     }
-
+    public bool isWon = false;
     public void Win()
     {
+        if (isWon) return;
+        isWon = true;
         Time.timeScale = 0f;
-       
         panelbot.SetActive(false);
         paneltop.SetActive(false);
         panelwin.SetActive(true);
+        PlayerPrefs.DeleteKey("Process");
         Debug.Log("win");
+        Debug.Log("time scale" + Time.timeScale);
     }
 
 
@@ -139,28 +174,66 @@ public class GameManager : MonoBehaviour
 
     public void Deal()
     {
-        for (int i = 0; i < bottoms.Length; i++)
+        if (deck.cards.Count == 52)
         {
-            for (int j = 1; j <= i + 1; j++)
+            for (int i = 0; i < bottoms.Length; i++)
             {
-                bottoms[i].cards.Add(deck.cards[deck.cards.Count - 1]);
-                deck.cards.RemoveAt(deck.cards.Count - 1);
-                bottoms[i].cards[bottoms[i].cards.Count - 1].GetComponent<Cards>().faceUp = false;
-                bottoms[i].cards[bottoms[i].cards.Count - 1].transform.SetParent(bottoms[i].transform);
+                for (int j = 1; j <= i + 1; j++)
+                {
+                    bottoms[i].cards.Add(deck.cards[deck.cards.Count - 1]);
+                    deck.cards.RemoveAt(deck.cards.Count - 1);
+                    bottoms[i].cards[bottoms[i].cards.Count - 1].GetComponent<Cards>().faceUp = false;
+                    bottoms[i].cards[bottoms[i].cards.Count - 1].transform.SetParent(bottoms[i].transform);
 
+                }
             }
         }
+        SaveProcess();
     }
 
-    
+
+public void Loadnext()
+    {
+        Time.timeScale = 1f;
+        PlayerPrefs.SetString("Level", "Random");
+        SceneManager.LoadScene("Random");
+        
+    }
     public void NextGame()
     {
-       // GameManager gameManager = FindAnyObjectByType<GameManager>();
-       // gameManager.ReloadScene();
+     
 
 
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        //SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        roll.cards = new List<GameObject>();
+        tops[0].cards = new List<GameObject>();
+        tops[1].cards = new List<GameObject>();
+        tops[2].cards = new List<GameObject>();
+        tops[3].cards = new List<GameObject>();
+        bottoms[0].cards = new List<GameObject>();
+        bottoms[1].cards = new List<GameObject>();
+        bottoms[2].cards = new List<GameObject>();
+        bottoms[3].cards = new List<GameObject>();
+        bottoms[4].cards = new List<GameObject>();
+        bottoms[5].cards = new List<GameObject>();
+        bottoms[6].cards = new List<GameObject>();
+        deck.cards = new List<GameObject>();
+        deck.outline.SetActive(false);
+
+        Steps = new List<ObjectState>();
+        isWon = false;
+        deck.cards.AddRange(firstDeck);
+        Shuffle();
+
+        firstDeck = new List<GameObject>();
+        firstDeck.AddRange(deck.cards);
+        Debug.Log("next");
+       
+
+        StartCoroutine(DelayContinue());
+        panelPlay.GetComponent<RectTransform>().DOMove(targetPlay - new Vector3(0, 3000, 0), 0.4f);
     }
 
 
@@ -181,6 +254,7 @@ public class GameManager : MonoBehaviour
         paneltop.SetActive(false);
         panelwin.SetActive(false);
         panelPause.SetActive(true);
+
     }
     public void Continue()
     {
@@ -190,80 +264,11 @@ public class GameManager : MonoBehaviour
         paneltop.SetActive(true);
         panelwin.SetActive(false);
         panelPause.SetActive(false);
+        panelPlay.GetComponent<RectTransform>().DOMove(targetPlay - new Vector3(0, 3000, 0), 0.4f);
 
     }
 
-    /*public void RestoreState()
-    {
-        if (Steps.Count == 0) return;
-        var last = Steps[Steps.Count - 1];
 
-        Steps.Remove(last);
-
-        int totalChild = last.parent.childCount;
-
-
-
-        List<GameObject> temp = new List<GameObject>();
-        switch (last.card.transform.parent.tag)
-        {
-
-            case "Bot":
-                int index = 0;
-                index = last.card.transform.parent.GetComponent<Bottoms>().cards.IndexOf(last.card.gameObject);
-                temp.AddRange(last.card.transform.parent.GetComponent<Bottoms>().cards.GetRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index));
-                last.card.transform.parent.GetComponent<Bottoms>().cards.RemoveRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index);
-                break;
-            case "Top":
-                temp.Add(last.card.gameObject);
-                last.card.transform.parent.GetComponent<Top>().cards.Remove(last.card.gameObject);
-                break;
-            case "Deck":
-                temp.Add(last.card.gameObject);
-                last.card.transform.parent.GetComponent<Deck>().cards.Remove(last.card.gameObject);
-                break;
-            case "Roll":
-                temp.Add(last.card.gameObject);
-                last.card.transform.parent.GetComponent<RollCard>().cards.Remove(last.card.gameObject);
-                break;
-        }
-
-        last.card.transform.SetParent(last.parent);
-        switch (last.card.transform.parent.tag)
-        {
-            case "Bot":
-                if (last.preCard != null)
-                {
-                    last.card.transform.parent.GetComponent<Bottoms>().cards.Last().GetComponent<Cards>().faceUp = last.preCard.GetComponent<Cards>().faceUp;
-                }
-                else
-                last.card.transform.parent.GetComponent<Bottoms>().cards.AddRange(temp);
-                break;
-            case "Top":
-                last.card.transform.parent.GetComponent<Top>().cards.AddRange(temp);
-                break;
-            case "Deck":
-                last.card.transform.parent.GetComponent<Deck>().cards.AddRange(temp);
-                break;
-            case "Roll":
-                last.card.transform.parent.GetComponent<RollCard>().cards.AddRange(temp);
-                break;
-        }
-
-        steps--;
-
-
-        if (totalChild > 0)
-        {
-            if (last.parent.GetChild(totalChild - 1).TryGetComponent(out Cards card))
-            {
-                card.faceUp = false;
-            }
-            else
-                card.faceUp = true;
-        }
-
-        }*/
     public void RestoreState()
     {
         if (Steps.Count == 0) return;
@@ -287,74 +292,412 @@ public class GameManager : MonoBehaviour
         }
 
         List<GameObject> temp = new List<GameObject>();
-         
+
         switch (last.card.transform.parent.tag)
-            {
+        {
 
-                case "Bot":
-                    int index = 0;
-                    index = last.card.transform.parent.GetComponent<Bottoms>().cards.IndexOf(last.card.gameObject);
-                    if(index == -1)
-                    {
+            case "Bot":
+                int index = 0;
+                index = last.card.transform.parent.GetComponent<Bottoms>().cards.IndexOf(last.card.gameObject);
+                if (index == -1)
+                {
 
-                        index = 0;
-                    }
-                   
-                    temp.AddRange(last.card.transform.parent.GetComponent<Bottoms>().cards.GetRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index));
-                    last.card.transform.parent.GetComponent<Bottoms>().cards.RemoveRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index);
-                    break;
-                case "Top":
-                    temp.Add(last.card.gameObject);
-                    last.card.transform.parent.GetComponent<Top>().cards.RemoveAt(last.card.transform.parent.GetComponent<Top>().cards.Count - 1);
-                    break;
-                case "Deck":
-                    temp.Add(last.card.gameObject);
-                    last.card.transform.parent.GetComponent<Deck>().cards.Remove(last.card.gameObject);
-                    break;
-                case "Roll":
-                    temp.Add(last.card.gameObject);
-                    last.card.transform.parent.GetComponent<RollCard>().cards.Remove(last.card.gameObject);
-                    break;
-            }
+                    index = 0;
+                }
 
-            last.card.transform.SetParent(last.parent);
-            switch (last.card.transform.parent.tag)
-            {
-                case "Bot":
+                temp.AddRange(last.card.transform.parent.GetComponent<Bottoms>().cards.GetRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index));
+                last.card.transform.parent.GetComponent<Bottoms>().cards.RemoveRange(index, last.card.transform.parent.GetComponent<Bottoms>().cards.Count - index);
+                break;
+            case "Top":
+                temp.Add(last.card.gameObject);
+                last.card.transform.parent.GetComponent<Top>().cards.RemoveAt(last.card.transform.parent.GetComponent<Top>().cards.Count - 1);
+                break;
+            case "Deck":
+                temp.Add(last.card.gameObject);
+                last.card.transform.parent.GetComponent<Deck>().cards.Remove(last.card.gameObject);
+                break;
+            case "Roll":
+                temp.Add(last.card.gameObject);
+                last.card.transform.parent.GetComponent<RollCard>().cards.Remove(last.card.gameObject);
+                break;
+        }
 
-                    if (last.preCard != null)
-                    {
-                        Debug.Log(last.prefaceup);
-                        last.parent.GetComponent<Bottoms>().cards[last.parent.GetComponent<Bottoms>().cards.Count - 1].GetComponent<Cards>().faceUp = last.prefaceup;
-                    }
-                    last.card.transform.parent.GetComponent<Bottoms>().cards.AddRange(temp);
-                    Debug.Log(last.preCard);
-                    break;
-                case "Top":
-                    last.card.transform.parent.GetComponent<Top>().cards.AddRange(temp);
-                    break;
-                case "Deck":
-                    last.card.transform.parent.GetComponent<Deck>().cards.AddRange(temp);
-                    break;
-                case "Roll":
-                    last.card.transform.parent.GetComponent<RollCard>().cards.AddRange(temp);
-                    break;
-            }
-            stepsCount++;
+        last.card.transform.SetParent(last.parent);
+        switch (last.card.transform.parent.tag)
+        {
+            case "Bot":
+
+                if (last.preCard != null)
+                {
+                    Debug.Log(last.prefaceup);
+                    last.parent.GetComponent<Bottoms>().cards[last.parent.GetComponent<Bottoms>().cards.Count - 1].GetComponent<Cards>().faceUp = last.prefaceup;
+                }
+                last.card.transform.parent.GetComponent<Bottoms>().cards.AddRange(temp);
+                Debug.Log(last.preCard);
+                break;
+            case "Top":
+                last.card.transform.parent.GetComponent<Top>().cards.AddRange(temp);
+                break;
+            case "Deck":
+                last.card.transform.parent.GetComponent<Deck>().cards.AddRange(temp);
+                break;
+            case "Roll":
+                last.card.transform.parent.GetComponent<RollCard>().cards.AddRange(temp);
+                break;
+        }
+        stepsCount++;
 
 
         Debug.Log(totalChild + " test");
 
- 
+
 
     }
     public void RestoreAll()
     {
+        isWon = false;
+
         if (myTween != null)
         {
             myTween.Kill();
         }
+        roll.cards = new List<GameObject>();
+        tops[0].cards = new List<GameObject>();
+        tops[1].cards = new List<GameObject>();
+        tops[2].cards = new List<GameObject>();
+        tops[3].cards = new List<GameObject>();
+        tops[0].value = 0;
+        tops[1].value = 0;
+        tops[2].value = 0;
+        tops[3].value = 0;
         Time.timeScale = 1;
+        bottoms[0].cards = new List<GameObject>();
+        bottoms[1].cards = new List<GameObject>();
+        bottoms[2].cards = new List<GameObject>();
+        bottoms[3].cards = new List<GameObject>();
+        bottoms[4].cards = new List<GameObject>();
+        bottoms[5].cards = new List<GameObject>();
+        bottoms[6].cards = new List<GameObject>();
+        deck.cards = new List<GameObject>();
+        deck.outline.SetActive(false);
+        Steps = new List<ObjectState>();
+        isWon = false;
+        deck.cards.AddRange(firstDeck);
+        Debug.Log("restart");
+
+
+        StartCoroutine(DelayContinue());
+        panelPlay.GetComponent<RectTransform>().DOMove(targetPlay - new Vector3(0, 3000, 0), 0.4f);
+
+    }
+
+    private IEnumerator DelayContinue()
+    {
+        yield return new WaitForSeconds(0.2f);
+        Debug.Log("Cut");
+        Continue();
+        timer = 0;
+        stepsCount = 0;
+        Deal();
+    }
+
+    public void SaveProcess()
+    {
+        process.bot0 = new List<string>();
+        process.bot1 = new List<string>();
+        process.bot2 = new List<string>();
+        process.bot3 = new List<string>();
+        process.bot4 = new List<string>();
+        process.bot5 = new List<string>();
+        process.bot6 = new List<string>();
+        process.top0 = new List<string>();
+        process.top1 = new List<string>();
+        process.top2 = new List<string>();
+        process.top3 = new List<string>();
+        process.deck = new List<string>();
+        process.roll = new List<string>();
+        process.bot0f = new List<bool>();
+        process.bot1f = new List<bool>();
+        process.bot2f = new List<bool>();
+        process.bot3f = new List<bool>();
+        process.bot4f = new List<bool>();
+        process.bot5f = new List<bool>();
+        process.bot6f = new List<bool>();
+        process.firstdeck = new List<string>();
+
+        foreach(GameObject card in firstDeck)
+        {
+            process.firstdeck.Add(card.name);
+        }
+        foreach(GameObject card in bottoms[0].GetComponent<Bottoms>().cards)
+        {
+            process.bot0.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot0f.Add(true);
+            }
+            else
+            {
+                process.bot0f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[1].GetComponent<Bottoms>().cards)
+        {
+            process.bot1.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot1f.Add(true);
+            }
+            else
+            {
+                process.bot1f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[2].GetComponent<Bottoms>().cards)
+        {
+            process.bot2.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot2f.Add(true);
+            }
+            else
+            {
+                process.bot2f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[3].GetComponent<Bottoms>().cards)
+        {
+            process.bot3.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot3f.Add(true);
+            }
+            else
+            {
+                process.bot3f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[4].GetComponent<Bottoms>().cards)
+        {
+            process.bot4.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot4f.Add(true);
+            }
+            else
+            {
+                process.bot4f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[5].GetComponent<Bottoms>().cards)
+        {
+            process.bot5.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot5f.Add(true);
+            }
+            else
+            {
+                process.bot5f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[6].GetComponent<Bottoms>().cards)
+        {
+            process.bot6.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot6f.Add(true);
+            }
+            else
+            {
+                process.bot6f.Add(false);
+            }
+        }
+        foreach ( GameObject card in tops[0].GetComponent<Top>().cards)
+        {
+            process.top0.Add(card.name);
+        }
+        foreach (GameObject card in tops[1].GetComponent<Top>().cards)
+        {
+            process.top1.Add(card.name);
+        }
+        foreach (GameObject card in tops[2].GetComponent<Top>().cards)
+        {
+            process.top2.Add(card.name);
+        }
+        foreach (GameObject card in tops[3].GetComponent<Top>().cards)
+        {
+            process.top3.Add(card.name);
+        }
+       
+        foreach (GameObject deck in deck.GetComponent<Deck>().cards)
+        {
+            process.deck.Add(deck.name);
+        }
+        foreach (GameObject card in roll.GetComponent<RollCard>().cards)
+        {
+            process.roll.Add(card.name);
+        }
+
+        string json = JsonConvert.SerializeObject(process);
+        Debug.Log(json);
+        PlayerPrefs.SetString("Process", json);
+    }
+    public void SaveLevel()
+    {
+        process.bot0 = new List<string>();
+        process.bot1 = new List<string>();
+        process.bot2 = new List<string>();
+        process.bot3 = new List<string>();
+        process.bot4 = new List<string>();
+        process.bot5 = new List<string>();
+        process.bot6 = new List<string>();
+        process.top0 = new List<string>();
+        process.top1 = new List<string>();
+        process.top2 = new List<string>();
+        process.top3 = new List<string>();
+        process.deck = new List<string>();
+        process.roll = new List<string>();
+        process.bot0f = new List<bool>();
+        process.bot1f = new List<bool>();
+        process.bot2f = new List<bool>();
+        process.bot3f = new List<bool>();
+        process.bot4f = new List<bool>();
+        process.bot5f = new List<bool>();
+        process.bot6f = new List<bool>();
+        process.firstdeck = new List<string>();
+
+        foreach (GameObject card in bottoms[0].GetComponent<Bottoms>().cards)
+        {
+            process.bot0.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot0f.Add(true);
+            }
+            else
+            {
+                process.bot0f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[1].GetComponent<Bottoms>().cards)
+        {
+            process.bot1.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot1f.Add(true);
+            }
+            else
+            {
+                process.bot1f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[2].GetComponent<Bottoms>().cards)
+        {
+            process.bot2.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot2f.Add(true);
+            }
+            else
+            {
+                process.bot2f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[3].GetComponent<Bottoms>().cards)
+        {
+            process.bot3.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot3f.Add(true);
+            }
+            else
+            {
+                process.bot3f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[4].GetComponent<Bottoms>().cards)
+        {
+            process.bot4.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot4f.Add(true);
+            }
+            else
+            {
+                process.bot4f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[5].GetComponent<Bottoms>().cards)
+        {
+            process.bot5.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot5f.Add(true);
+            }
+            else
+            {
+                process.bot5f.Add(false);
+            }
+        }
+        foreach (GameObject card in bottoms[6].GetComponent<Bottoms>().cards)
+        {
+            process.bot6.Add(card.name);
+            if (card.GetComponent<Cards>().faceUp)
+            {
+                process.bot6f.Add(true);
+            }
+            else
+            {
+                process.bot6f.Add(false);
+            }
+        }
+        foreach (GameObject card in tops[0].GetComponent<Top>().cards)
+        {
+            process.top0.Add(card.name);
+        }
+        foreach (GameObject card in tops[1].GetComponent<Top>().cards)
+        {
+            process.top1.Add(card.name);
+        }
+        foreach (GameObject card in tops[2].GetComponent<Top>().cards)
+        {
+            process.top2.Add(card.name);
+        }
+        foreach (GameObject card in tops[3].GetComponent<Top>().cards)
+        {
+            process.top3.Add(card.name);
+        }
+
+        foreach (GameObject deck in deck.GetComponent<Deck>().cards)
+        {
+            process.deck.Add(deck.name);
+        }
+        foreach (GameObject card in roll.GetComponent<RollCard>().cards)
+        {
+            process.roll.Add(card.name);
+        }
+        foreach (GameObject card in firstDeck)
+        {
+            process.firstdeck.Add(card.name);
+        }
+        string filename;
+        int count = 1;
+        while (File.Exists("Assets/Resources/Level" + count + ".json"))
+        {
+            count++;
+        }
+        filename = "Level" + count + ".json";
+        string json = JsonConvert.SerializeObject(process);
+        string path = Path.Combine("Assets", "Resources", filename);
+        File.WriteAllText(path, json);        
+    }
+    public void LoadLevel()
+    {
+        int randomNumber = Random.Range(1,10);
+
+        string json = Resources.Load<TextAsset>("Level" + randomNumber.ToString()).text;
+
+        process = JsonConvert.DeserializeObject<Process>(json);
         roll.cards = new List<GameObject>();
         tops[0].cards = new List<GameObject>();
         tops[1].cards = new List<GameObject>();
@@ -368,92 +711,160 @@ public class GameManager : MonoBehaviour
         bottoms[5].cards = new List<GameObject>();
         bottoms[6].cards = new List<GameObject>();
         deck.cards = new List<GameObject>();
-        deck.outline.SetActive(false);
-        Steps = new List<ObjectState>();
-
-        deck.cards.AddRange(firstDeck);
-
-
-        StartCoroutine(DelayContinue());
-       
-
-    }
-    public void RestartG()
-    {
-        
-    }
-
-    private IEnumerator DelayContinue()
-    {
-        yield return new WaitForSeconds(0.2f);
-        Continue();
-        timer = 0;
-        stepsCount = 0;
-        Deal();
-    }
-
-    private void SupportAll()
-    {
-        if (Steps.Count == 0) return;
-        var last = Steps[Steps.Count - 1];
-
-        Steps.Remove(last);
-
-        int totalChild = last.parent.childCount;
-
-
-
-
-        switch (last.card.transform.parent.tag)
+        for (int i = 0; i < process.bot0.Count; i++)
         {
-
-            case "Bot":
-                last.card.transform.parent.GetComponent<Bottoms>().cards.Remove(last.card.gameObject);
-                break;
-            case "Top":
-                last.card.transform.parent.GetComponent<Top>().cards.Remove(last.card.gameObject);
-                break;
-            case "Deck":
-                last.card.transform.parent.GetComponent<Deck>().cards.Remove(last.card.gameObject);
-                break;
-            case "Roll":
-                last.card.transform.parent.GetComponent<RollCard>().cards.Remove(last.card.gameObject);
-                break;
+            bottoms[0].cards.Add(GameObject.Find(process.bot0[i]));
+            bottoms[0].cards.Last().GetComponent<Cards>().faceUp = process.bot0f[i];
+            Debug.Log("cardgace" + process.bot0f[i]);
+        }
+        for (int i = 0; i < process.bot1.Count; i++)
+        {
+            bottoms[1].cards.Add(GameObject.Find(process.bot1[i]));
+            bottoms[1].cards.Last().GetComponent<Cards>().faceUp = process.bot1f[i];
+        }
+        for (int i = 0; i < process.bot2.Count; i++)
+        {
+            bottoms[2].cards.Add(GameObject.Find(process.bot2[i]));
+            bottoms[2].cards.Last().GetComponent<Cards>().faceUp = process.bot2f[i];
+        }
+        for (int i = 0; i < process.bot3.Count; i++)
+        {
+            bottoms[3].cards.Add(GameObject.Find(process.bot3[i]));
+            bottoms[3].cards.Last().GetComponent<Cards>().faceUp = process.bot3f[i];
+        }
+        for (int i = 0; i < process.bot4.Count; i++)
+        {
+            bottoms[4].cards.Add(GameObject.Find(process.bot4[i]));
+            bottoms[4].cards.Last().GetComponent<Cards>().faceUp = process.bot4f[i];
+        }
+        for (int i = 0; i < process.bot5.Count; i++)
+        {
+            bottoms[5].cards.Add(GameObject.Find(process.bot5[i]));
+            bottoms[5].cards.Last().GetComponent<Cards>().faceUp = process.bot5f[i];
+        }
+        for (int i = 0; i < process.bot6.Count; i++)
+        {
+            bottoms[6].cards.Add(GameObject.Find(process.bot6[i]));
+            bottoms[6].cards.Last().GetComponent<Cards>().faceUp = process.bot6f[i];
         }
 
-        last.card.transform.SetParent(last.parent);
-        switch (last.card.transform.parent.tag)
+        foreach(string card in process.firstdeck)
         {
-            case "Bot":
-                last.card.transform.parent.GetComponent<Bottoms>().cards.Add(last.card.gameObject);
-
-                break;
-            case "Top":
-                last.card.transform.parent.GetComponent<Top>().cards.Add(last.card.gameObject);
-                break;
-            case "Deck":
-                last.card.transform.parent.GetComponent<Deck>().cards.Add(last.card.gameObject);
-                break;
-            case "Roll":
-                last.card.transform.parent.GetComponent<RollCard>().cards.Add(last.card.gameObject);
-                break;
+            firstDeck.Add(GameObject.Find(card));
         }
-
-        stepsCount--;
-        roll.cards.Reverse();
-        deck.cards.AddRange(roll.cards);
+        foreach (string card in process.top0)
+        {
+            tops[0].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top1)
+        {
+            tops[1].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top2)
+        {
+            tops[2].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top3)
+        {
+            tops[3].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.deck)
+        {
+            deck.cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.roll)
+        {
+            roll.cards.Add(GameObject.Find(card));
+        }
+    }
+    public void LoadProcess()
+    {
+        string json = PlayerPrefs.GetString("Process");
+        process = JsonConvert.DeserializeObject<Process>(json);
         roll.cards = new List<GameObject>();
-        if (totalChild > 0)
+        tops[0].cards = new List<GameObject>();
+        tops[1].cards = new List<GameObject>();
+        tops[2].cards = new List<GameObject>();
+        tops[3].cards = new List<GameObject>();
+        bottoms[0].cards = new List<GameObject>();
+        bottoms[1].cards = new List<GameObject>();
+        bottoms[2].cards = new List<GameObject>();
+        bottoms[3].cards = new List<GameObject>();
+        bottoms[4].cards = new List<GameObject>();
+        bottoms[5].cards = new List<GameObject>();
+        bottoms[6].cards = new List<GameObject>();
+        deck.cards = new List<GameObject>();
+        firstDeck = new List<GameObject>();
+        for (int i = 0; i < process.bot0.Count; i++ ) 
         {
-            if (last.parent.GetChild(totalChild - 1).TryGetComponent(out Cards card))
-            {
-                card.faceUp = false;
-            }
-            else
-                card.faceUp = true;
-
+            bottoms[0].cards.Add(GameObject.Find(process.bot0[i]));
+            bottoms[0].cards.Last().GetComponent<Cards>().faceUp = process.bot0f[i];
+            Debug.Log("cardgace" + process.bot0f[i]);
         }
+        for (int i = 0; i < process.bot1.Count; i++)
+        {
+            bottoms[1].cards.Add(GameObject.Find(process.bot1[i]));
+            bottoms[1].cards.Last().GetComponent<Cards>().faceUp = process.bot1f[i];
+        }
+        for (int i = 0; i < process.bot2.Count; i++)
+        {
+            bottoms[2].cards.Add(GameObject.Find(process.bot2[i]));
+            bottoms[2].cards.Last().GetComponent<Cards>().faceUp = process.bot2f[i];
+        }
+        for (int i = 0; i < process.bot3.Count; i++)
+        {
+            bottoms[3].cards.Add(GameObject.Find(process.bot3[i]));
+            bottoms[3].cards.Last().GetComponent<Cards>().faceUp = process.bot3f[i];
+        }
+        for (int i = 0; i < process.bot4.Count; i++)
+        {
+            bottoms[4].cards.Add(GameObject.Find(process.bot4[i]));
+            bottoms[4].cards.Last().GetComponent<Cards>().faceUp = process.bot4f[i];
+        }
+        for (int i = 0; i < process.bot5.Count; i++)
+        {
+            bottoms[5].cards.Add(GameObject.Find(process.bot5[i]));
+            bottoms[5].cards.Last().GetComponent<Cards>().faceUp = process.bot5f[i];
+        }
+        for (int i = 0; i < process.bot6.Count; i++)
+        {
+            bottoms[6].cards.Add(GameObject.Find(process.bot6[i]));
+            bottoms[6].cards.Last().GetComponent<Cards>().faceUp = process.bot6f[i];
+        }
+
+        foreach (string card in process.firstdeck)
+        {
+            firstDeck.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top0)
+        {
+            tops[0].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top1)
+        {
+            tops[1].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top2)
+        {
+            tops[2].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.top3)
+        {
+            tops[3].cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.deck)
+        {
+           deck.cards.Add(GameObject.Find(card));
+        }
+        foreach (string card in process.roll)
+        {
+            roll.cards.Add(GameObject.Find(card));
+        }
+
+
     }
+
+ 
     Sequence blinkSq;
     public void Blink()
     {
@@ -462,11 +873,11 @@ public class GameManager : MonoBehaviour
             deck.outline.SetActive(true);
             blinkSq = DOTween.Sequence();
             blinkSq.Append(deck.outline.GetComponent<SpriteRenderer>().DOFade(0.4f, 0.7f));
-           //blinkSq.AppendInterval(0.4f);
+            //blinkSq.AppendInterval(0.4f);
             blinkSq.Append(deck.outline.GetComponent<SpriteRenderer>().DOFade(1, 0.7f));
             //blinkSq.AppendInterval(0.4f);
             blinkSq.SetLoops(-1);
-        }      
+        }
     }
     public void StopBlink()
     {
@@ -493,8 +904,8 @@ public class GameManager : MonoBehaviour
             deck.outline.SetActive(true);
 
             Debug.Log("CCHINT");
-           Blink();
-            
+            Blink();
+
         }
         else
         {
@@ -504,7 +915,7 @@ public class GameManager : MonoBehaviour
 
             cardhint.transform.position = card.transform.position + Vector3.back * 4;
             cardhint.SetActive(true);
-            myTween =  cardhint.transform.DOMove(hintTarget.transform.position, 1.1f).OnComplete(EndHint);
+            myTween = cardhint.transform.DOMove(hintTarget.transform.position, 1.1f).OnComplete(EndHint);
 
         }
     }
@@ -573,14 +984,14 @@ public class GameManager : MonoBehaviour
         if (FindCardHint() == null && deck.cards.Count == 0) return true;
         return false;
     }
-     
+
     public bool check = false;
     public bool CardFly()
     {
         Debug.Log("RUN");
         StartCoroutine(DelayFly());
-        if (check) { 
-        Debug.Log(check.ToString());
+        if (check) {
+            Debug.Log(check.ToString());
         }
         return check;
     }
@@ -622,7 +1033,7 @@ public class GameManager : MonoBehaviour
                         //GameManager.Instance.steps++;
                         GameManager.Instance.AddStep(new GameManager.ObjectState() { card = lastCard, parent = lastCard.transform.parent, preCard = lastCard.GetComponent<Cards>().precard, prefaceup = lastCard.GetComponent<Cards>().preFaceUp });
                         check = true;
-                      
+
 
                         break;
                     }
@@ -646,7 +1057,7 @@ public class GameManager : MonoBehaviour
                         //GameManager.Instance.steps++;
                         GameManager.Instance.AddStep(new GameManager.ObjectState() { card = lastCard, parent = lastCard.transform.parent, preCard = lastCard.GetComponent<Cards>().precard, prefaceup = lastCard.GetComponent<Cards>().preFaceUp });
                         check = true;
-                        
+
 
                         break;
                     }
@@ -664,7 +1075,7 @@ public class GameManager : MonoBehaviour
                         GameManager.Instance.AddStep(new GameManager.ObjectState() { card = lastCard, parent = lastCard.transform.parent, preCard = lastCard.GetComponent<Cards>().precard, prefaceup = lastCard.GetComponent<Cards>().preFaceUp });
 
                         check = true;
-                        
+
 
                         break;
                     }
@@ -678,5 +1089,25 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene("menu");
+        panelPlay.GetComponent<RectTransform>().DOMove(targetPlay - new Vector3(0, 3000, 0), 0.4f);
+    }
+
+    public void PlayOP()
+    {
+       
+        
+        if (isPlaying)
+        {
+            isPlaying = true;
+            panelPlay.GetComponent<RectTransform>().DOMove(targetPlay - new Vector3(0,  3000, 0), 0.4f);
+        }
+        else
+        {
+            isPlaying = false;
+            panelPlay.GetComponent<RectTransform>().DOMove(targetPlay, 0.4f);
+            
+            paneltop.SetActive(false);
+           an.SetActive(false);
+        }
     }
 }
